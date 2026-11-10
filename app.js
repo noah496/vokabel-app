@@ -17,7 +17,7 @@ const saveSet = () => LS.set('set', SET);
 let DB, W = new Map(), ROOT = new Map(), SRC = [], QRANK = [];
 const CAT = { v: 'Verb', n: 'Nomen', adj: 'Adjektiv', ap: 'Partizip aktiv', pp: 'Partizip passiv', vn: 'Verbalnomen (Masdar)', p: 'Partikel / Pronomen', pn: 'Eigenname', adv: 'Adverb / Zeit / Ort', own: 'Eigene Karte' };
 const STEM = { 1: 'I (فَعَلَ)', 2: 'II (فَعَّلَ)', 3: 'III (فَاعَلَ)', 4: 'IV (أَفْعَلَ)', 5: 'V (تَفَعَّلَ)', 6: 'VI (تَفَاعَلَ)', 7: 'VII (اِنْفَعَلَ)', 8: 'VIII (اِفْتَعَلَ)', 9: 'IX (اِفْعَلَّ)', 10: 'X (اِسْتَفْعَلَ)' };
-const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
+const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI'];
 
 function buildIndex() {
   W = new Map(); ROOT = new Map();
