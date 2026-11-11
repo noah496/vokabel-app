@@ -141,3 +141,29 @@ details summary { cursor: pointer; color: var(--acc); padding: 6px 0; }
 .lesson .p { font-size: 12.5px; color: var(--tx2); white-space: nowrap; }
 .mini { height: 4px; background: var(--chip); border-radius: 3px; overflow: hidden; margin-top: 5px; display: flex; }
 .mini i { display: block; height: 100%; }
+
+/* Quran-Leser und Hadithe */
+@font-face { font-family: 'Hafs'; src: url('fonts/UthmanicHafs-v3.ttf') format('truetype'); font-display: swap; }
+.qtext { font-family: 'Hafs', 'Amiri', serif; direction: rtl; font-size: 30px; line-height: 2.1; text-align: right; }
+.htext { font-family: 'Amiri', serif; direction: rtl; font-size: 26px; line-height: 2; text-align: right; }
+.big1 { font-size: 44px; line-height: 1.8; }
+.surah-head { text-align: center; margin: 4px 0 10px; }
+.surah-head .qname { font-size: 34px; }
+.basm { text-align: center; margin: 14px 0 4px; font-size: 28px; }
+.ayah { padding: 10px 2px; border-bottom: 1px solid var(--line); }
+.ayah .tr { font-size: 15px; color: var(--tx2); margin-top: 6px; }
+.ayah .tr b { color: var(--acc); margin-right: 4px; }
+.qw { cursor: pointer; border-radius: 6px; }
+.qw:active b { color: var(--acc); }
+.qw b { font-weight: normal; }
+.aend { font-family: 'Hafs', serif; color: var(--acc); margin: 0 4px; }
+.wbwmode .qtext, .wbwmode .htext { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: flex-start; line-height: 1.7; }
+.wbwmode .qw { display: inline-flex; flex-direction: column; align-items: center; text-align: center; max-width: 8.5em; }
+.wbwmode .qw i { font-family: system-ui, sans-serif; font-style: normal; font-size: 12.5px; line-height: 1.25; color: var(--tx2); direction: ltr; }
+.qw i { display: none; }
+.wbwmode .qw i { display: block; }
+.hp { color: var(--tx2); }
+.pagehead { display: flex; align-items: center; justify-content: space-between; margin: 16px 0 4px; padding: 6px 10px; background: var(--chip); border-radius: 10px; font-size: 14px; color: var(--tx2); }
+.wlist .num { min-width: 30px; height: 30px; border-radius: 8px; background: var(--chip); display: grid; place-items: center; font-size: 13px; color: var(--tx2); flex: none; }
+.goal .progress { margin: 8px 0 6px; }
+.streak { font-weight: 600; }

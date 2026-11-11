@@ -12,11 +12,13 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="stylesheet" href="style.css">
+<link rel="preload" href="fonts/UthmanicHafs-v3.ttf" as="font" type="font/ttf" crossorigin>
 </head>
 <body>
 <header class="top">
   <button id="back" class="icon-btn" aria-label="Zurück" hidden>‹</button>
   <h1 id="title">Vokabeltrainer</h1>
+  <button id="searchBtn" class="icon-btn" aria-label="Suche">⌕</button>
   <button id="settingsBtn" class="icon-btn" aria-label="Einstellungen">⚙</button>
 </header>
 <main id="view"><p class="loading">Wortschatz wird geladen …</p></main>
@@ -24,10 +26,11 @@
   <button data-go="home" class="on"><span>⌂</span>Start</button>
   <button data-go="learn"><span>🂠</span>Lernen</button>
   <button data-go="test"><span>✎</span>Prüfung</button>
-  <button data-go="plural"><span>ج</span>Plural</button>
+  <button data-go="quran"><span>۝</span>Quran</button>
   <button data-go="browse"><span>☰</span>Wortschatz</button>
 </nav>
 <div id="modal" class="modal" hidden><div class="sheet" id="sheet"></div></div>
 <script src="app.js"></script>
+<script src="extra.js"></script>
 </body>
 </html>
