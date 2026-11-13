@@ -7,7 +7,7 @@ const LS = {
   set(k, v) { try { localStorage.setItem('vk.' + k, JSON.stringify(v)); } catch (e) { toast('Speichern fehlgeschlagen'); } }
 };
 let S = LS.get('state', { c: {}, hist: {}, tests: 0 });   // Lernstand
-let SET = Object.assign({ front: 'ar', round: 20, testN: 20, plN: 15, theme: 'dark', src: 'all' }, LS.get('set', {}));
+let SET = Object.assign({ front: 'ar', round: 20, testN: 20, plN: 15, theme: 'dark', src: 'all', goal: 20, qwbw: true, qtr: false }, LS.get('set', {}));
 let OWN = LS.get('own', []);       // eigene Karten
 let EDIT = LS.get('edit', {});     // Änderungen an Karten
 const save = () => LS.set('state', S);
@@ -34,7 +34,8 @@ function buildIndex() {
   }
   QRANK = DB.entries.filter(e => e.src.includes('q')).sort((a, b) => b.f - a.f).map(e => String(e.id));
   const qLessons = [];
-  for (let i = 0; i < QRANK.length; i += 100) qLessons.push({ k: 'q.' + (i / 100 + 1), t: `Häufigkeit ${i + 1}–${Math.min(i + 100, QRANK.length)}`, ids: QRANK.slice(i, i + 100) });
+  const qtot = DB.entries.reduce((a, e) => a + (e.src.includes('q') ? e.f || 0 : 0), 0) || 1; let cum = 0;
+  for (let i = 0; i < QRANK.length; i += 100) { const sl = QRANK.slice(i, i + 100); cum += sl.reduce((a, x) => a + (W.get(x).f || 0), 0); qLessons.push({ k: 'q.' + (i / 100 + 1), t: `Häufigkeit ${i + 1}–${Math.min(i + 100, QRANK.length)} · bis hier ${Math.round(cum / qtot * 100)} % des Qurantextes`, ids: sl }); }
   SRC = [{ k: 'q', t: 'Quran (nach Häufigkeit)', l: qLessons }];
   const lessonIds = {};
   for (const e of W.values()) for (const s of e.src || []) { (lessonIds[s] = lessonIds[s] || []).push(String(e.id)); }
@@ -117,6 +118,7 @@ function go(name, arg, push = true) {
 function back() { stack.pop(); const p = stack[stack.length - 1]; if (p) go(p[0], p[1], false); else go('home'); }
 $('#back').onclick = back;
 $('#settingsBtn').onclick = () => { stack = [['home']]; go('settings'); };
+$('#searchBtn').onclick = () => { stack = [['home']]; go('search'); };
 document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => { stack = []; go(b.dataset.go); });
 
 function srcSelect(id, val) {
@@ -126,20 +128,36 @@ function srcSelect(id, val) {
 // ---------- Seiten ----------
 const R = {};
 
+function actOn(d) { const h = S.hist[new Date(Date.now() - d * DAY).toISOString().slice(0, 10)]; return h && ((h.cards || 0) + (h.tq || 0)) > 0; }
+function streakDays() { let n = 0, d = actOn(0) ? 0 : 1; while (actOn(d) && d < 4000) { n++; d++; } return n; }
+let QTOTAL = 0;
+function coverage() {
+  if (!QTOTAL) QTOTAL = DB.entries.reduce((a, e) => a + (e.src.includes('q') ? e.f || 0 : 0), 0) || 1;
+  let k = 0; for (const e of DB.entries) if (e.f && e.src.includes('q') && lvOf(e.id) >= 3) k += e.f;
+  return k / QTOTAL * 100;
+}
+function nextDue(id) { const c = S.c[String(id)]; if (!c || !c.lv) return ''; const d = Math.ceil(((c.ls || 0) + IV[c.lv] - now()) / DAY); return d <= 0 ? 'heute fällig' : d === 1 ? 'morgen' : `in ${d} Tagen`; }
 R.home = () => {
   tabs('home'); setTitle('Vokabeltrainer', false);
   const all = [...W.keys()];
   const seen = all.filter(i => lvOf(i) > 0).length, learned = all.filter(i => lvOf(i) >= 5).length;
   const due = dueIds('all').length;
   const h = S.hist[today()] || {};
+  const doneToday = (h.cards || 0) + (h.tq || 0), goal = SET.goal || 20;
+  const cov = coverage();
   view.innerHTML = `
+  <div class="goal panel"><div class="row"><b class="grow">Tagesziel ${Math.min(doneToday, goal)} / ${goal}</b><span class="streak" title="Tage in Folge">🔥 ${streakDays()} ${streakDays() === 1 ? 'Tag' : 'Tage'}</span></div>
+    <div class="progress"><i style="width:${Math.min(100, doneToday / goal * 100)}%"></i></div>
+    <div class="small muted">${doneToday >= goal ? 'Tagesziel erreicht. Stark!' : `Noch ${goal - doneToday} Karten oder Fragen bis zum Tagesziel.`}</div></div>
   <div class="tiles">
-    <div class="tile"><b>${seen}</b><span>gesehen</span></div>
+    <div class="tile"><b>${due}</b><span>heute fällig</span></div>
     <div class="tile"><b>${learned}</b><span>gelernt</span></div>
-    <div class="tile"><b>${due}</b><span>zur Wiederholung</span></div>
+    <div class="tile"><b>${cov.toFixed(1).replace('.', ',')} %</b><span>vom Qurantext</span></div>
   </div>
-  <p class="muted small">Heute: ${h.cards || 0} Karten, ${h.tq || 0} Prüfungsfragen. Wortschatz: ${all.length} Wörter.</p>
+  <p class="muted small">Du kennst Wörter (ab Stufe 3), die ${cov.toFixed(1).replace('.', ',')} % aller Wörter im Quran ausmachen. Gesehen: ${seen} von ${all.length} Wörtern.</p>
   <div class="menu">
+    <button data-go="quran"><span class="ic">۝</span><div><b>Quran lesen</b><small>Wort für Wort, Lernen nach Sure und Seite</small></div></button>
+    <button data-go="hadith"><span class="ic">❝</span><div><b>Hadithe</b><small>40 Hadithe an-Nawawi, ʿUmdat al-Aḥkām</small></div></button>
     <button data-go="learn"><span class="ic">🂠</span><div><b>Karteikarten lernen</b><small>Neue Wörter und Wiederholung, 5 Stufen</small></div></button>
     <button data-go="test"><span class="ic">✎</span><div><b>Prüfung</b><small>Eintippen, zufällig Deutsch ↔ Arabisch</small></div></button>
     <button data-go="plural"><span class="ic">ج</span><div><b>Plural-Training</b><small>Mehrzahl lernen und prüfen</small></div></button>
@@ -151,10 +169,10 @@ R.home = () => {
 };
 
 // ----- Lernen (Karteikarten)
-const IV = [0, 0, DAY, 3 * DAY, 7 * DAY, 21 * DAY];
+const IV = [0, DAY, 3 * DAY, 7 * DAY, 14 * DAY, 30 * DAY];   // Abstand bis zur nächsten Wiederholung je Stufe
 function dueIds(src) {
   const t = now();
-  return idsOfSource(src).filter(i => { const c = S.c[i]; return c && c.lv > 0 && c.lv < 5 && (t - (c.ls || 0)) >= IV[c.lv]; })
+  return idsOfSource(src).filter(i => { const c = S.c[i]; return c && c.lv > 0 && (t - (c.ls || 0)) >= IV[c.lv]; })
     .sort((a, b) => lvOf(a) - lvOf(b) || (S.c[a].ls || 0) - (S.c[b].ls || 0));
 }
 function newIds(src) {
@@ -172,7 +190,7 @@ R.learn = () => {
     <label>Karten pro Runde</label><input type="number" id="lround" min="5" max="100" value="${SET.round}">
   </div>
   <div class="menu" id="lmenu"></div>
-  <p class="muted small">Gewusst: eine Stufe höher. Nicht gewusst: zurück auf Stufe 1, und die Karte kommt in der Runde wieder, bis du sie weißt. Ab Stufe 5 gilt ein Wort als gelernt.</p>`;
+  <p class="muted small">Gewusst: eine Stufe höher. Nicht gewusst: zurück auf Stufe 1, und die Karte kommt in der Runde wieder, bis du sie weißt. Ab Stufe 5 gilt ein Wort als gelernt. Wiederholung nach 1, 3, 7, 14 und 30 Tagen (je nach Stufe).</p>`;
   const seg = $('#front');
   const upd = () => seg.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === SET.front));
   seg.onclick = e => { if (e.target.dataset.v) { SET.front = e.target.dataset.v; saveSet(); upd(); } }; upd();
@@ -262,6 +280,7 @@ function detailHTML(e, opt = {}) {
   if (e.g) chips.push(`<span class="chip">${e.g === 'f' ? 'weiblich' : 'männlich'}</span>`);
   if (e.f) chips.push(`<span class="chip">${e.f}× im Quran</span>`);
   chips.push(`<span class="chip">Stufe <span class="lv lv${lv}">${lv}</span></span>`);
+  if (lv) chips.push(`<span class="chip">Wiederholung: ${nextDue(e.id)}</span>`);
   let h = `<div class="head"><div class="big ar">${esc(e.ar)}</div><div class="de">${esc(e.de)}</div></div><div class="chips" style="justify-content:center">${chips.join('')}</div><dl class="kv">`;
   if (e.r) h += `<dt>Wurzel</dt><dd class="ar">${esc(e.r)}</dd>`;
   if (e.pl && e.pl.length) h += `<dt>Plural</dt><dd class="ar">${e.pl.map(esc).join(' ، ')}</dd>`;
@@ -574,10 +593,11 @@ R.stats = () => {
   let tq = 0, tr = 0; Object.values(S.hist).forEach(h => { tq += h.tq || 0; tr += h.tr || 0; });
   const days = []; for (let d = 13; d >= 0; d--) { const k = new Date(Date.now() - d * DAY).toISOString().slice(0, 10); const h = S.hist[k] || {}; days.push({ k, n: (h.cards || 0) + (h.tq || 0) }); }
   const mx = Math.max(1, ...days.map(d => d.n));
-  let streak = 0; { const act = d => { const h = S.hist[new Date(Date.now() - d * DAY).toISOString().slice(0, 10)]; return h && ((h.cards || 0) + (h.tq || 0)) > 0; }; let d = act(0) ? 0 : 1; while (act(d) && d < 4000) { streak++; d++; } }
+  const streak = streakDays();
   const plSeen = ids.filter(i => S.c[i] && S.c[i].p && S.c[i].p.lv > 0).length, plLearn = ids.filter(i => S.c[i] && S.c[i].p && S.c[i].p.lv >= 5).length;
   view.innerHTML = `
    <div class="tiles"><div class="tile"><b>${seen}</b><span>gesehen</span></div><div class="tile"><b>${c[5]}</b><span>gelernt</span></div><div class="tile"><b>${streak}</b><span>Tage in Folge</span></div></div>
+   <div class="panel"><h2>Quran-Abdeckung</h2><p>Die Wörter, die du kennst (ab Stufe 3), machen <b>${coverage().toFixed(1).replace('.', ',')} %</b> aller Wörter im Quran aus.</p><p class="small muted">Tipp: Lerne nach Häufigkeit. Die häufigsten 300 Wörter decken schon rund zwei Drittel des Textes ab.</p></div>
    <div class="panel"><h2>Stufen</h2><div class="bars">${[1, 2, 3, 4, 5].map(l => `<div class="bar"><span>Stufe ${l}</span><span class="tr"><i style="width:${seen ? c[l] / seen * 100 : 0}%;background:var(--l${l})"></i></span><span>${c[l]}</span></div>`).join('')}</div>
    <p class="small muted">Noch nicht gesehen: ${c[0]} von ${ids.length} Wörtern.</p></div>
    <div class="panel"><h2>Prüfungen</h2><p>${S.tests || 0} Prüfungen, ${tq} Fragen, davon ${tr} richtig${tq ? ` (${Math.round(tr / tq * 100)} %)` : ''}.</p>
@@ -592,7 +612,8 @@ R.settings = () => {
   view.innerHTML = `<div class="panel"><label>Darstellung</label><div class="seg" id="th"><button data-v="dark">Dunkel</button><button data-v="light">Hell</button></div>
    <label>Vorderseite der Karteikarten</label><div class="seg" id="fr"><button data-v="ar">Arabisch</button><button data-v="de">Deutsch</button><button data-v="mix">Gemischt</button></div>
    <label>Karten pro Runde</label><input type="number" id="sr1" min="5" max="100" value="${SET.round}">
-   <label>Fragen pro Prüfung</label><input type="number" id="sr2" min="5" max="200" value="${SET.testN}"></div>
+   <label>Fragen pro Prüfung</label><input type="number" id="sr2" min="5" max="200" value="${SET.testN}">
+   <label>Tagesziel (Karten + Prüfungsfragen pro Tag)</label><input type="number" id="sr3" min="5" max="500" value="${SET.goal}"></div>
    <div class="panel"><h2>Über die Daten</h2><p class="small">Quran-Wortschatz: alle Lemmata des Quranic Arabic Corpus (Morphologie), deutsche Bedeutungen von Hand erstellt, Beispielverse mit der Übersetzung von Bubenheim/Elyas. Medina-Bücher 1–3 und Fusha-Grundwortschatz: Auswahl nach Lektionsthemen, die Zuordnung ist ungefähr. Fehler kannst du über „Bearbeiten“ an jeder Karte selbst korrigieren.</p>
    <p class="small muted">Dein Lernstand wird nur auf diesem Gerät im Browser gespeichert. Wer die App über den Link öffnet, hat seinen eigenen Lernstand.</p></div>
    <div class="panel"><h2>Sicherung</h2><div class="row"><button class="btn sm" id="bk">Lernstand sichern (Datei)</button><button class="btn sm" id="rs">Sicherung laden</button><input type="file" id="rf" accept=".json" hidden></div></div>
@@ -604,6 +625,7 @@ R.settings = () => {
   }
   $('#sr1').onchange = e => { SET.round = Math.max(5, Math.min(100, +e.target.value || 20)); saveSet(); };
   $('#sr2').onchange = e => { SET.testN = Math.max(5, Math.min(200, +e.target.value || 20)); saveSet(); };
+  $('#sr3').onchange = e => { SET.goal = Math.max(5, Math.min(500, +e.target.value || 20)); saveSet(); };
   $('#reset').onclick = () => { if (confirm('Wirklich den ganzen Lernstand löschen? Eigene Karten bleiben erhalten.')) { S = { c: {}, hist: {}, tests: 0 }; save(); toast('Lernstand gelöscht'); go('home'); } };
   $('#bk').onclick = () => {
     const blob = new Blob([JSON.stringify({ state: S, own: OWN, edit: EDIT, set: SET })], { type: 'application/json' });
